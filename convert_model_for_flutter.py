@@ -1,229 +1,124 @@
 #!/usr/bin/env python3
 """
-Convert YOLOv8 PyTorch model to TensorFlow Lite format for Flutter integration.
+Export the trained YOLOv8 seat-belt classifier to ONNX for the Flutter app.
+
+The app runs `assets/models/seatbelt_model.onnx` on-device via onnxruntime.
+The exported contract, which lib/main.dart depends on, is:
+
+    input  "images"  [1, 3, 224, 224]  float32, NCHW, RGB, scaled to 0-1
+    output "output0" [1, 2]            softmax already applied by the model
+    classes                            {0: no_seatbelt, 1: seatbelt}
+
+Preprocessing that matches training: scale the shorter side to 224 preserving
+aspect ratio, centre-crop 224x224, divide by 255. Do NOT subtract ImageNet
+mean/std and do NOT convert to grayscale - both measurably reduce accuracy.
+
+Note: an earlier version of this script also emitted `seatbelt_model.tflite`
+built from a freshly-initialised Keras CNN whose weights were never loaded
+from best.pt. That file was a random-weight stub, not the trained model, and
+has been removed along with the code that produced it.
 """
 
-import sys
+import json
 import os
-from pathlib import Path
+import shutil
+import sys
 
-# Add the current directory to Python path for imports
-sys.path.append(os.getcwd())
+DEFAULT_WEIGHTS = "training_results/optimized_run_1759628547/weights/best.pt"
+OUTPUT_DIR = "seatbelt_detector_app/assets/models"
+IMGSZ = 224
+CLASS_NAMES = ["no_seatbelt", "seatbelt"]
 
-def convert_yolo_to_tflite():
-    """Convert the trained YOLOv8 model to TFLite format via ONNX."""
-    try:
-        from ultralytics import YOLO
-        import onnx
-        import tensorflow as tf
-        
-        # Load the trained model (from seatbelt_ACTUALLY_FILTERED dataset)
-        model_path = "training_results/optimized_run_1759628547/weights/best.pt"
-        print(f"Loading model from: {model_path}")
-        print("📁 Using model trained ONLY on seatbelt_ACTUALLY_FILTERED dataset")
-        
-        if not os.path.exists(model_path):
-            print(f"Error: Model file not found at {model_path}")
-            return False
-        
-        # Load YOLO model
-        model = YOLO(model_path)
-        print("Model loaded successfully")
-        
-        # Create output directory
-        output_dir = "seatbelt_detector_app/assets/models/"
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Step 1: Export to ONNX (this usually works better)
-        print("Step 1: Exporting to ONNX format...")
-        onnx_path = os.path.join(output_dir, "seatbelt_model.onnx")
-        
-        try:
-            model.export(
-                format='onnx',
-                imgsz=224,
-                optimize=True,
-                simplify=True
-            )
-            
-            # Find the exported ONNX file (usually in same directory as .pt file)
-            model_dir = os.path.dirname(model_path)
-            exported_onnx = os.path.join(model_dir, "best.onnx")
-            
-            if os.path.exists(exported_onnx):
-                import shutil
-                shutil.copy(exported_onnx, onnx_path)
-                print(f"ONNX model saved to: {onnx_path}")
-            else:
-                print("ONNX export failed - file not found")
-                return False
-                
-        except Exception as e:
-            print(f"ONNX export failed: {e}")
-            return False
-        
-        # Step 2: Create a simple TFLite model for the app
-        print("Step 2: Creating TFLite model...")
-        return create_simple_tflite_model(output_dir)
-            
-    except ImportError as e:
-        print(f"Import error: {e}")
-        print("Make sure required packages are installed")
-        return False
-    except Exception as e:
-        print(f"Error during conversion: {e}")
-        return False
 
-def create_simple_tflite_model(output_dir):
-    """Create a simple TFLite model that can be loaded by Flutter."""
-    try:
-        import tensorflow as tf
-        import numpy as np
-        
-        # Create a simple classification model with the same signature as YOLO
-        model = tf.keras.Sequential([
-            tf.keras.layers.Input(shape=(224, 224, 3), name='input'),
-            tf.keras.layers.Conv2D(32, 3, activation='relu'),
-            tf.keras.layers.MaxPooling2D(),
-            tf.keras.layers.Conv2D(64, 3, activation='relu'),
-            tf.keras.layers.MaxPooling2D(),
-            tf.keras.layers.Conv2D(64, 3, activation='relu'),
-            tf.keras.layers.GlobalAveragePooling2D(),
-            tf.keras.layers.Dense(64, activation='relu'),
-            tf.keras.layers.Dense(2, activation='softmax', name='output')  # 2 classes: no_seatbelt, seatbelt
-        ])
-        
-        # Compile the model
-        model.compile(
-            optimizer='adam',
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy']
-        )
-        
-        print("Simple TensorFlow model created")
-        
-        # Convert to TFLite with simpler approach
-        converter = tf.lite.TFLiteConverter.from_keras_model(model)
-        
-        # Use basic optimization only
-        converter.optimizations = [tf.lite.Optimize.DEFAULT]
-        
-        # Don't use representative dataset to avoid conversion issues
-        # This will create a float32 model which is fine for our use case
-        
-        tflite_model = converter.convert()
-        
-        # Save the TFLite model
-        tflite_path = os.path.join(output_dir, "seatbelt_model.tflite")
-        with open(tflite_path, 'wb') as f:
-            f.write(tflite_model)
-        
-        print(f"✅ TFLite model saved to: {tflite_path}")
-        print(f"Model size: {len(tflite_model) / (1024*1024):.2f} MB")
-        
-        # Test the model to ensure it works
-        test_tflite_model(tflite_path)
-        
-        # Create a weight mapping file for the trained model weights
-        create_weight_mapping(output_dir)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error creating TFLite model: {e}")
-        return False
+def export_onnx(weights: str, output_dir: str) -> str:
+    """Export `weights` to ONNX and copy it into the app's assets."""
+    from ultralytics import YOLO
 
-def test_tflite_model(tflite_path):
-    """Test the TFLite model to ensure it works."""
-    try:
-        import tensorflow as tf
-        import numpy as np
-        
-        # Load the TFLite model
-        interpreter = tf.lite.Interpreter(model_path=tflite_path)
-        interpreter.allocate_tensors()
-        
-        # Get input and output tensors
-        input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()
-        
-        print(f"✅ TFLite model loaded successfully")
-        print(f"Input shape: {input_details[0]['shape']}")
-        print(f"Output shape: {output_details[0]['shape']}")
-        
-        # Test with random input
-        test_input = np.random.random((1, 224, 224, 3)).astype(np.float32)
-        interpreter.set_tensor(input_details[0]['index'], test_input)
-        interpreter.invoke()
-        
-        # Get output
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        print(f"Test inference successful - Output: {output_data[0]}")
-        
-    except Exception as e:
-        print(f"Warning: TFLite model test failed: {e}")
+    if not os.path.exists(weights):
+        raise FileNotFoundError(f"Model file not found: {weights}")
 
-def create_weight_mapping(output_dir):
-    """Create a mapping file to help load the actual trained weights."""
-    try:
-        from ultralytics import YOLO
-        import json
-        
-        # Load the trained model to extract some statistics
-        model_path = "training_results/optimized_run_1759620168/weights/best.pt"
-        model = YOLO(model_path)
-        
-        # Create mapping info
-        weight_info = {
-            "model_type": "yolov8n-cls",
-            "num_classes": 2,
-            "class_names": ["no_seatbelt", "seatbelt"],
-            "input_size": [224, 224, 3],
-            "trained_model_path": "../../../training_results/optimized_run_1759620168/weights/best.pt",
-            "preprocessing": {
-                "normalize": True,
-                "mean": [0.485, 0.456, 0.406],
-                "std": [0.229, 0.224, 0.225],
-                "grayscale_conversion": True
-            },
-            "inference_notes": "This TFLite model is a placeholder. Use the weight mapping to load actual YOLO weights."
-        }
-        
-        mapping_path = os.path.join(output_dir, "weight_mapping.json")
-        with open(mapping_path, 'w') as f:
-            json.dump(weight_info, f, indent=2)
-        
-        print(f"Weight mapping saved to: {mapping_path}")
-        
-    except Exception as e:
-        print(f"Warning: Could not create weight mapping: {e}")
+    os.makedirs(output_dir, exist_ok=True)
 
-def create_model_info():
-    """Create a model info file for the Flutter app."""
-    model_info = {
+    print(f"Loading {weights}")
+    model = YOLO(weights)
+
+    print(f"Exporting to ONNX at {IMGSZ}x{IMGSZ} ...")
+    exported = model.export(format="onnx", imgsz=IMGSZ, simplify=True)
+
+    # Recent ultralytics returns the export path; older versions write
+    # best.onnx next to the weights.
+    if not (exported and os.path.exists(str(exported))):
+        exported = os.path.join(os.path.dirname(weights), "best.onnx")
+    if not os.path.exists(str(exported)):
+        raise RuntimeError("ONNX export did not produce a file")
+
+    destination = os.path.join(output_dir, "seatbelt_model.onnx")
+    shutil.copy(str(exported), destination)
+    print(f"Wrote {destination}")
+    return destination
+
+
+def verify_onnx(path: str) -> dict:
+    """Fail loudly if the export does not match the contract main.dart expects."""
+    import onnx
+
+    graph = onnx.load(path).graph
+
+    def dims(value):
+        return [d.dim_value or d.dim_param for d in value.type.tensor_type.shape.dim]
+
+    inputs = {v.name: dims(v) for v in graph.input}
+    outputs = {v.name: dims(v) for v in graph.output}
+
+    if inputs.get("images") != [1, 3, IMGSZ, IMGSZ]:
+        raise RuntimeError(f"Unexpected input signature: {inputs}")
+    if outputs.get("output0") != [1, len(CLASS_NAMES)]:
+        raise RuntimeError(f"Unexpected output signature: {outputs}")
+
+    print(f"Verified: images {inputs['images']} -> output0 {outputs['output0']}")
+    return {"inputs": inputs, "outputs": outputs}
+
+
+def write_model_info(output_dir: str) -> None:
+    info = {
         "model_name": "seatbelt_classifier",
-        "input_size": 224,
-        "num_classes": 2,
-        "class_names": ["no_seatbelt", "seatbelt"],
-        "preprocessing": "grayscale_to_rgb",
-        "normalization": "0-1"
+        "file": "seatbelt_model.onnx",
+        "architecture": "yolov8n-cls",
+        "input_name": "images",
+        "input_shape": [1, 3, IMGSZ, IMGSZ],
+        "input_layout": "NCHW",
+        "colour": "RGB",
+        "normalization": "divide by 255 only; no mean/std subtraction",
+        "resize": (
+            "scale shorter side to 224 preserving aspect ratio, "
+            "then centre-crop 224x224"
+        ),
+        "output_name": "output0",
+        "output_shape": [1, len(CLASS_NAMES)],
+        "output_note": (
+            "softmax is already applied inside the model; do not apply it again"
+        ),
+        "class_names": CLASS_NAMES,
     }
-    
-    import json
-    info_path = "seatbelt_detector_app/assets/models/model_info.json"
-    
-    with open(info_path, 'w') as f:
-        json.dump(model_info, f, indent=2)
-    
-    print(f"Model info saved to: {info_path}")
+    path = os.path.join(output_dir, "model_info.json")
+    with open(path, "w") as handle:
+        json.dump(info, handle, indent=2)
+        handle.write("\n")
+    print(f"Wrote {path}")
+
+
+def main() -> int:
+    weights = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_WEIGHTS
+    try:
+        destination = export_onnx(weights, OUTPUT_DIR)
+        verify_onnx(destination)
+        write_model_info(OUTPUT_DIR)
+    except Exception as error:  # noqa: BLE001 - surface the reason to the user
+        print(f"\nExport failed: {error}")
+        return 1
+    print("\nExport complete. Run the app to use the trained model.")
+    return 0
+
 
 if __name__ == "__main__":
-    print("Converting YOLOv8 PyTorch model to TensorFlow Lite...")
-    
-    if convert_yolo_to_tflite():
-        create_model_info()
-        print("\n✅ Conversion completed successfully!")
-        print("The Flutter app can now use the trained model for real inference.")
-    else:
-        print("\n❌ Conversion failed!")
-        print("Please check the error messages above.")
+    raise SystemExit(main())

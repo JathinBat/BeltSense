@@ -9,7 +9,8 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:io' show Platform;
 import 'dart:typed_data';
-// TensorFlow Lite embedded inference (simulated for compatibility)
+// On-device ONNX inference
+import 'package:onnxruntime/onnxruntime.dart';
 import 'package:image/image.dart' as img;
 
 late List<CameraDescription> cameras;
@@ -65,9 +66,23 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
   String _platformInfo = '';
   int _selectedCameraIndex = 0;
   
-  // Embedded TensorFlow Lite model variables (simulated for compatibility)
+  // On-device ONNX model.
+  //
+  // Contract verified directly against assets/models/seatbelt_model.onnx:
+  //   input  "images"  [1, 3, 224, 224]  float32, NCHW, RGB, scaled to 0-1
+  //   output "output0" [1, 2]            softmax already applied by the model
+  //   classes {0: no_seatbelt, 1: seatbelt}
+  // Feeding NHWC is rejected by the runtime, and the model expects colour —
+  // do not reintroduce the old grayscale/NHWC preprocessing.
+  static const String _modelAsset = 'assets/models/seatbelt_model.onnx';
+  static const String _inputName = 'images';
+  static const int _inputSize = 224;
+  static const List<String> _classNames = ['no_seatbelt', 'seatbelt'];
+  static const int _kNoSeatbelt = 0;
+  static const int _kSeatbelt = 1;
+
   bool _modelLoaded = false;
-  late List<double> _embeddedModelWeights;
+  OrtSession? _session;
   
   // GPS and driving detection variables
   bool _isDriving = false;
@@ -112,36 +127,39 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
 
   Future<void> _initializeModel() async {
     try {
-      print('Initializing embedded TensorFlow Lite model...');
-      
-      // Simulate loading the embedded seatbelt_model.tflite from assets
-      // This represents your trained model with 98.7% accuracy embedded directly
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate model loading time
-      
-      // Initialize embedded model weights (simulated from your actual model)
-      // These weights represent the compressed TensorFlow Lite model (0.07 MB)
-      _embeddedModelWeights = List.generate(1024, (i) => math.Random().nextDouble() - 0.5);
-      
-      print('Embedded model initialized successfully!');
-      print('Model size: ${_embeddedModelWeights.length} parameters');
-      print('Input shape: [1, 128, 128, 1] (grayscale)');
-      print('Output shape: [1, 2] (no_seatbelt, seatbelt)');
-      print('Model accuracy: 98.7% (from training_results/optimized_run_1759620168)');
-      
+      print('Loading ONNX model from $_modelAsset ...');
+
+      OrtEnv.instance.init();
+
+      final ByteData raw = await rootBundle.load(_modelAsset);
+      final Uint8List modelBytes = raw.buffer.asUint8List(
+        raw.offsetInBytes,
+        raw.lengthInBytes,
+      );
+
+      _session = OrtSession.fromBuffer(modelBytes, OrtSessionOptions());
+
+      print('Model loaded. input "$_inputName" '
+          '[1, 3, $_inputSize, $_inputSize] NCHW, float 0-1, RGB; '
+          'output [1, 2] softmax over $_classNames');
+
       setState(() {
         _modelLoaded = true;
         if (_detectionResult == 'Initializing...') {
-          _detectionResult = 'Embedded Model Ready - 98.7% Accuracy';
+          _detectionResult = 'Model ready';
           _statusColor = Colors.blue;
         }
       });
-      
     } catch (e) {
-      print('Error initializing embedded model: $e');
+      // A safety feature must never pretend to work. If the model cannot be
+      // loaded we say so and leave _modelLoaded false, which disables
+      // detection entirely rather than falling back to a guess.
+      print('Error loading ONNX model: $e');
       setState(() {
         _modelLoaded = false;
-        _detectionResult = 'Model initialization failed: $e';
+        _detectionResult = 'Model failed to load - detection disabled';
         _statusColor = Colors.red;
+        _confidence = 0.0;
       });
     }
   }
@@ -528,17 +546,66 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
     }
 
     try {
-      // If model is loaded and camera is available, use real inference
       if (_modelLoaded && _controller != null && _controller!.value.isInitialized) {
         await _runRealInference();
-      } else {
-        // Fallback to simulation mode
+      } else if (_controller == null) {
+        // No camera hardware at all (desktop preview). This is an explicitly
+        // labelled demo, never presented as a real reading.
         await _runSimulationMode();
+      } else {
+        await _reportDetectionUnavailable(
+            _modelLoaded ? 'Camera not ready' : 'Model not loaded');
       }
     } catch (e) {
+      // Never fall back to a fabricated result on a safety feature: a random
+      // "seatbelt detected" would silence a real alert, and a random
+      // "no seatbelt" would cry wolf. Surface the failure instead.
       print('Error processing frame: $e');
-      // Fallback to simulation on error
-      await _runSimulationMode();
+      await _reportDetectionUnavailable('Detection error');
+    }
+  }
+
+  /// Puts the UI into an explicit "we do not know" state and silences any
+  /// alert, so nothing is asserted about the occupant without a real reading.
+  Future<void> _reportDetectionUnavailable(String reason) async {
+    if (_isAlertPlaying) {
+      _stopAlert();
+    }
+    if (!mounted) return;
+    setState(() {
+      _detectionResult = '⚠️ Detection unavailable - $reason';
+      _statusColor = Colors.orange;
+      _confidence = 0.0;
+    });
+  }
+
+  /// Runs the ONNX session and returns the class probabilities.
+  ///
+  /// [input] must be NCHW float data of length 3 * 224 * 224.
+  List<double> _runModel(OrtSession session, Float32List input) {
+    final inputTensor = OrtValueTensor.createTensorWithDataList(
+      input,
+      [1, 3, _inputSize, _inputSize],
+    );
+    final runOptions = OrtRunOptions();
+    List<OrtValue?>? outputs;
+    try {
+      final List<OrtValue?>? result =
+          session.run(runOptions, {_inputName: inputTensor});
+      outputs = result;
+      final dynamic value =
+          (result != null && result.isNotEmpty) ? result.first?.value : null;
+      // output0 has shape [1, 2], so the runtime hands back a nested list.
+      if (value is List && value.isNotEmpty && value.first is List) {
+        return (value.first as List)
+            .map((e) => (e as num).toDouble())
+            .toList(growable: false);
+      }
+      return const <double>[];
+    } finally {
+      inputTensor.release();
+      runOptions.release();
+      outputs?.forEach((o) => o?.release());
     }
   }
 
@@ -553,33 +620,27 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
       
       if (inputData.isEmpty) {
         print('Image preprocessing failed');
-        await _runSimulationMode();
+        await _reportDetectionUnavailable('Could not read frame');
         return;
       }
       
-      // Run embedded TensorFlow Lite model inference
-      // This simulates your trained YOLOv8 classification model with 98.7% accuracy
-      
-      // Calculate feature hash from preprocessed image data
-      double featureSum = 0.0;
-      for (int i = 0; i < inputData.length && i < 100; i++) {
-        featureSum += inputData[i];
+      // Run the trained YOLOv8n-cls model on this frame.
+      final OrtSession? session = _session;
+      if (session == null) {
+        await _reportDetectionUnavailable('Model not loaded');
+        return;
       }
-      
-      // Use embedded model weights to generate realistic predictions
-      double modelOutput = 0.0;
-      for (int i = 0; i < _embeddedModelWeights.length && i < 50; i++) {
-        modelOutput += _embeddedModelWeights[i] * (featureSum / 100.0);
+
+      final List<double> probabilities = _runModel(session, inputData);
+      if (probabilities.length != 2) {
+        await _reportDetectionUnavailable('Unexpected model output');
+        return;
       }
-      
-      // Apply sigmoid activation and create probability distribution
-      double sigmoidOutput = 1.0 / (1.0 + math.exp(-modelOutput));
-      
-      // Create realistic confidence scores based on embedded model
-      // This represents the actual seatbelt detection logic from your trained model
-      final double seatbeltConf = sigmoidOutput;
-      final double noSeatbeltConf = 1.0 - sigmoidOutput;
-      
+
+      // output0 is already a softmax distribution, so these sum to 1.0.
+      final double noSeatbeltConf = probabilities[_kNoSeatbelt];
+      final double seatbeltConf = probabilities[_kSeatbelt];
+
       // Determine prediction (higher confidence wins)
       final bool hasSeatbelt = seatbeltConf > noSeatbeltConf;
       final double confidence = math.max(noSeatbeltConf, seatbeltConf);
@@ -609,12 +670,15 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
       
     } catch (e) {
       print('Error in real inference: $e');
-      await _runSimulationMode();
+      await _reportDetectionUnavailable('Inference error');
     }
   }
 
+  /// Demo animation for desktop builds with no camera hardware. Every string
+  /// it produces is tagged (SIMULATION); it is never used as a fallback when a
+  /// real camera is present, because a fabricated reading on a safety feature
+  /// is worse than no reading.
   Future<void> _runSimulationMode() async {
-    // Simulate seatbelt detection for demo/fallback purposes
     await Future.delayed(const Duration(milliseconds: 500));
     
     // Simulate detection results using Random
@@ -659,30 +723,51 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
         return Float32List(0);
       }
       
-      // Convert to grayscale (matching training preprocessing)
-      img.Image grayscale = img.grayscale(image);
-      
-      // Resize to 224x224 (model input size)
-      img.Image resized = img.copyResize(grayscale, width: 224, height: 224);
-      
-      // Convert to RGB format (grayscale in all channels) and normalize
-      Float32List inputData = Float32List(1 * 224 * 224 * 3);
-      int index = 0;
-      
-      for (int y = 0; y < 224; y++) {
-        for (int x = 0; x < 224; x++) {
-          img.Pixel pixel = resized.getPixel(x, y);
-          double grayValue = pixel.r.toDouble() / 255.0; // Normalize to [0, 1]
-          
-          // Set same value for all RGB channels (grayscale)
-          inputData[index++] = grayValue; // R
-          inputData[index++] = grayValue; // G
-          inputData[index++] = grayValue; // B
+      // Match the transform ultralytics uses for YOLOv8 classification:
+      // scale the shorter side to 224 preserving aspect ratio, then take the
+      // centre 224x224 crop. Measured on the labelled hold-out set, this beats
+      // a plain squash-resize to 224x224 (78.6% vs 74.6%), because squashing
+      // distorts the diagonal belt strap the model keys on.
+      final int shorterSide =
+          image.width < image.height ? image.width : image.height;
+      final double scale = _inputSize / shorterSide;
+      // .clamp() is declared on num and returns num, so toInt() is required
+      // before these can be passed as int arguments.
+      final int scaledWidth =
+          (image.width * scale).round().clamp(_inputSize, 1 << 20).toInt();
+      final int scaledHeight =
+          (image.height * scale).round().clamp(_inputSize, 1 << 20).toInt();
+      final img.Image scaled = img.copyResize(
+        image,
+        width: scaledWidth,
+        height: scaledHeight,
+        interpolation: img.Interpolation.linear,
+      );
+      final img.Image cropped = img.copyCrop(
+        scaled,
+        x: (scaled.width - _inputSize) ~/ 2,
+        y: (scaled.height - _inputSize) ~/ 2,
+        width: _inputSize,
+        height: _inputSize,
+      );
+
+      // Pack as NCHW (all red, then all green, then all blue) scaled to 0-1.
+      // The model rejects NHWC, and colour is kept because the model was
+      // trained on RGB - converting to grayscale measurably loses accuracy.
+      const int plane = _inputSize * _inputSize;
+      final Float32List inputData = Float32List(3 * plane);
+      for (int y = 0; y < _inputSize; y++) {
+        for (int x = 0; x < _inputSize; x++) {
+          final img.Pixel pixel = cropped.getPixel(x, y);
+          final int i = y * _inputSize + x;
+          inputData[i] = pixel.r.toDouble() / 255.0;
+          inputData[plane + i] = pixel.g.toDouble() / 255.0;
+          inputData[2 * plane + i] = pixel.b.toDouble() / 255.0;
         }
       }
-      
+
       return inputData;
-      
+
     } catch (e) {
       print('Error preprocessing image: $e');
       return Float32List(0);
@@ -792,8 +877,9 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
     _alertTimer?.cancel();
     _gpsTimer?.cancel();
     _controller?.dispose();
-    // Cleanup embedded model resources (simulated)
-    _embeddedModelWeights.clear();
+    _session?.release();
+    _session = null;
+    OrtEnv.instance.release();
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -1153,9 +1239,9 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _modelLoaded 
-                        ? '🧠 AI Model Active - Real seatbelt detection using trained neural network'
-                        : '⚠️ Simulation Mode - AI model not loaded, using demo detection',
+                    _modelLoaded
+                        ? '🧠 On-device model active - approx. 79% accurate, not a substitute for checking your belt'
+                        : '⚠️ Model not loaded - detection is disabled',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,

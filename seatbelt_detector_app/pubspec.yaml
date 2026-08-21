@@ -34,9 +34,10 @@ dependencies:
   # Camera functionality
   camera: ^0.10.6
   
-  # ML model integration - TensorFlow Lite inference
-  # Using a simpler HTTP service approach for better compatibility
-  
+  # On-device inference. Runs assets/models/seatbelt_model.onnx locally so
+  # that camera frames never leave the device (see the privacy policy).
+  onnxruntime: ^1.4.1
+
   # Image processing for model input preprocessing
   image: ^4.1.7
   

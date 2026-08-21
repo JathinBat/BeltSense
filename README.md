@@ -3,10 +3,28 @@
 A YOLOv8-based image classifier for detecting whether people in car images are wearing seatbelts.
 
 ## 📊 Model Performance
-- **Accuracy**: 95.7% (achieved at epoch 17)
+
+Measured by running `seatbelt_model.onnx` over the 126 hand-labelled hold-out
+images in `Manually classified/`:
+
+| Metric | Value |
+|---|---|
+| Overall accuracy | **78.6%** (99/126) |
+| Correctly flags no seat belt | 74/87 — misses **15%** of violations |
+| Correctly clears a worn belt | 25/39 — **36%** false alarms |
+
+Treat the output as an assistive hint, not a safety guarantee. The 95.7% figure
+previously quoted here was the training-time validation score; it does not
+reproduce on held-out data.
+
+- **Training-time validation accuracy**: 95.7% (epoch 17)
 - **Training Images**: 1,710 (767 seatbelt, 943 no-seatbelt)
 - **Validation Images**: 370 (133 seatbelt, 237 no-seatbelt)
 - **Total Dataset**: 2,080 images
+
+> **Note on the dataset:** the training images are third-party photos of
+> identifiable people collected from image search. They are deliberately not
+> tracked in this repository — see `.gitignore`.
 
 ## 🎯 Usage
 
