@@ -1,0 +1,17 @@
+# AUDIO PLACEHOLDER
+# 
+# This is a placeholder for alert.mp3
+# Replace this file with an actual MP3 audio file for custom alert sounds
+#
+# Recommended specifications:
+# - Format: MP3 or WAV
+# - Duration: 1-3 seconds
+# - Sample Rate: 44.1kHz
+# - Bit Rate: 128kbps+
+# - Volume: Normalized (not too loud)
+#
+# The app will automatically detect and use this file when present.
+# If this file is missing, it will fall back to:
+# 1. System sounds
+# 2. Online audio (if available)
+# 3. Haptic feedback (mobile only)

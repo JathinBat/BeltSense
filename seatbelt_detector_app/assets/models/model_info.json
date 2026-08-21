@@ -1,0 +1,11 @@
+{
+  "model_name": "seatbelt_classifier",
+  "input_size": 224,
+  "num_classes": 2,
+  "class_names": [
+    "no_seatbelt",
+    "seatbelt"
+  ],
+  "preprocessing": "grayscale_to_rgb",
+  "normalization": "0-1"
+}

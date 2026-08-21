@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# Image datasets — NEVER COMMIT.
+# The training images are third-party photos of identifiable people collected
+# from image search. There is no licence to redistribute them, and they are
+# labelled with whether the person was wearing a seat belt. Keep them local.
+# ---------------------------------------------------------------------------
+archive/
+Manually classified/
+seatbelt_dataset/
+seatbelt_dataset_filtered/
+no seatbelt.v3i.yolov8/
+*.zip
+
+# Training batch previews — these tile the raw dataset photos into one image,
+# so they leak the dataset even when the dataset itself is ignored.
+**/train_batch*.jpg
+**/val_batch*.jpg
+runs/
+
+# Intermediate checkpoints (epoch0.pt, last.pt, ...). Only best.pt is kept.
+**/weights/epoch*.pt
+**/weights/last.pt
+
+# Regenerable dependencies — ultralytics downloads these on demand.
+yolov8n*.pt
+calibration_image_sample_data_*.npy
+
+# Trained model output dir
+seatbelt_model/
+
+# Flutter generated platform dirs
+seatbelt_detector_app/android/
+seatbelt_detector_app/ios/
+seatbelt_detector_app/windows/
+seatbelt_detector_app/web/
+seatbelt_detector_app/macos/
+
+# Generated files that embed local paths and machine names
+*.flutter-plugins-dependencies
+.dart_tool/
+.vscode/
+.idea/
+
+# Build artifacts and caches
+build/
+__pycache__/
+*.pyc
+
+# Local notes and secrets
+*.docx
+.env
+*.key
+*.jks
+*.keystore
+key.properties

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy &mdash; BeltSense</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #5a5a5a;
+    --rule: #e3e3e3;
+    --accent: #1f5f8b;
+    --mark-bg: #fff3cd;
+    --mark-fg: #6b4e00;
+    --card: #f6f7f9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c;
+      --fg: #e8e8e8;
+      --muted: #a2a2a2;
+      --rule: #33373d;
+      --accent: #7fb8dd;
+      --mark-bg: #4a3a00;
+      --mark-fg: #ffe08a;
+      --card: #1e2126;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  main {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 3rem 1.25rem 5rem;
+  }
+  h1 {
+    font-size: 2rem;
+    line-height: 1.2;
+    margin: 0 0 .35rem;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: 1.2rem;
+    margin: 2.5rem 0 .75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--rule);
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1rem; margin: 1.5rem 0 .4rem; }
+  p, li { color: var(--fg); }
+  ul { padding-left: 1.25rem; }
+  li { margin: .4rem 0; }
+  .meta { color: var(--muted); font-size: .9rem; margin: 0 0 2rem; }
+  .summary {
+    background: var(--card);
+    border-left: 3px solid var(--accent);
+    padding: 1rem 1.25rem;
+    border-radius: 0 6px 6px 0;
+    margin: 2rem 0;
+  }
+  .summary p:first-child { margin-top: 0; }
+  .summary p:last-child { margin-bottom: 0; }
+  mark {
+    background: var(--mark-bg);
+    color: var(--mark-fg);
+    padding: 0 .2em;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  a { color: var(--accent); }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: .875rem;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Privacy Policy</h1>
+  <p class="meta">
+    <strong>BeltSense</strong>, published by <strong>jathib</strong><br>
+    Last updated: August 21, 2026 &nbsp;&middot;&nbsp; Effective: August 21, 2026
+  </p>
+
+  <div class="summary">
+    <p><strong>The short version.</strong> BeltSense uses your phone's camera and GPS to check whether you are wearing a seat belt while the vehicle is moving. Both the camera images and the location readings are processed entirely on your device, in real time. Nothing is uploaded, nothing is stored after it is used, and we do not operate any server that receives your data. We have no accounts, no analytics, no advertising, and no third-party trackers.</p>
+  </div>
+
+  <h2>1. Who we are</h2>
+  <p>This app is developed and published by jathib. If you have any question about privacy in this app, you can reach us at <a href="mailto:battepatijathin@gmail.com">battepatijathin@gmail.com</a>. We aim to respond to privacy requests within 30 days.</p>
+
+  <h2>2. What the app accesses</h2>
+
+  <h3>Camera</h3>
+  <p>While a drive-monitoring session is active, the app reads the live camera feed and analyzes each frame on your device to determine whether a seat belt is visible across the occupant's torso. These frames exist only in your device's memory for the fraction of a second required to run that analysis, and are then discarded. The app does not save photos or video to your device's storage, does not upload frames anywhere, and does not use them to identify who you are.</p>
+
+  <h3>Location (GPS)</h3>
+  <p>The app reads your device's location while a drive-monitoring session is active, and uses successive readings only to calculate your current speed. Speed is what tells the app whether you are likely to be in a moving vehicle, so that it does not alert you while the phone is sitting still. Coordinates are used in the moment and discarded. The app does not build a location history, does not record where you have been, and does not transmit your position anywhere.</p>
+
+  <h3>Location is used only in the foreground</h3>
+  <p>The app requests location only while it is open and a monitoring session is running. It does not request or use background location access, and it does not track you when a session is not active.</p>
+
+  <h2>3. What we do not collect</h2>
+  <ul>
+    <li>We do not collect your name, email address, phone number, or any other contact information.</li>
+    <li>We do not require or offer an account, and we do not have a login.</li>
+    <li>We do not collect device identifiers, advertising IDs, or any persistent identifier used to recognize you.</li>
+    <li>We do not store photographs, video, or location history.</li>
+    <li>We do not use analytics, crash-reporting, or advertising software development kits (SDKs).</li>
+    <li>We do not use cookies or comparable web tracking technologies.</li>
+  </ul>
+
+  <h2>4. Permissions the app requests, and why</h2>
+  <ul>
+    <li><strong>Camera</strong> (<code>android.permission.CAMERA</code>) &mdash; required to detect a seat belt. Without it, the app's core function cannot work.</li>
+    <li><strong>Precise location</strong> (<code>ACCESS_FINE_LOCATION</code>) &mdash; required to estimate vehicle speed so the app knows when you are driving.</li>
+  </ul>
+  <p>Before either permission is requested, the app shows you an in-app explanation of what it needs and why, and you can decline. You can also revoke either permission at any time in your device's <em>Settings &rarr; Apps &rarr; BeltSense &rarr; Permissions</em>. Revoking a permission will disable the corresponding feature but will not otherwise affect the app.</p>
+
+  <h2>5. How your data is shared</h2>
+  <p>It is not. Because camera and location data never leave your device, there is no data for us to share, sell, rent, or disclose. We do not have service providers, advertising partners, or data brokers who receive information from this app. We do not sell personal information, and we do not share personal information for cross-context behavioral advertising, as those terms are used under California law.</p>
+  <p>The only circumstance in which we could disclose information is if we were legally compelled to produce data we hold &mdash; and we hold none from this app.</p>
+
+  <h2>6. How long data is kept</h2>
+  <p>Camera frames and location readings are held in device memory only for as long as the immediate calculation takes, and are then released. Nothing is written to persistent storage, and there is no retention period because there is no retained data.</p>
+  <p>Any preferences you set inside BeltSense &mdash; such as alert settings &mdash; are saved locally on your device and are removed when you uninstall the app. They are never transmitted to us.</p>
+
+  <h2>7. Security</h2>
+  <p>Because processing happens locally and no data is transmitted, your camera and location information is never exposed to a network. Data held briefly in memory is protected by the Android operating system's application sandbox, which prevents other apps from reading it.</p>
+
+  <h2>8. Deleting your data</h2>
+  <p>The app does not create an account and does not store your personal data, so there is no account or record to delete. Uninstalling the app removes any locally stored settings from your device. If you believe we hold data about you and would like it deleted, email us at <a href="mailto:battepatijathin@gmail.com">battepatijathin@gmail.com</a> and we will respond within 30 days.</p>
+
+  <h2>9. Children's privacy</h2>
+  <p>This app is intended for drivers and vehicle occupants and is not directed to children under 13. We do not knowingly collect personal information from children. Because the app collects no personal information from anyone, it holds none from children either. If you believe a child has provided us with personal information, please contact us.</p>
+
+  <h2>10. Your privacy rights</h2>
+  <p>Depending on where you live, you may have rights to access, correct, delete, or port your personal data, or to object to or restrict its processing &mdash; for example under the EU and UK General Data Protection Regulation, or the California Consumer Privacy Act as amended. We honor these rights, and note that because this app transmits and stores no personal data, in practice there is nothing for us to retrieve or erase on your behalf. You retain full control over the app's access to your camera and location through your device's permission settings at any time.</p>
+  <p>Where processing does occur on your device, our legal basis under the GDPR is your consent, given when you grant the camera and location permissions. You may withdraw that consent at any time by revoking the permissions.</p>
+
+  <h2>11. Third-party services</h2>
+  <p>The app does not integrate any third-party analytics, advertising, crash-reporting, or backend services. If this changes in a future version, we will update this policy and disclose the services involved before the change takes effect.</p>
+
+  <h2>12. Changes to this policy</h2>
+  <p>If we change how the app handles data, we will revise this policy and update the "Last updated" date above. For material changes &mdash; for example, if a future version were to transmit data off the device &mdash; we will notify you within the app and, where required, ask for your consent before the change applies to you.</p>
+
+  <h2>13. Contact</h2>
+  <p>
+    jathib<br>
+    <a href="mailto:battepatijathin@gmail.com">battepatijathin@gmail.com</a>
+  </p>
+
+  <footer>
+    <p>This policy applies to the BeltSense Android application distributed through Google Play.</p>
+  </footer>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# YOLOv8 Classification Dataset Configuration
+# This file tells YOLO where to find your training data
+
+# Path to dataset root directory (can be absolute or relative)
+path: ./seatbelt_dataset
+
+# Relative paths from 'path' to training/validation/test directories
+train: train  # Path to training images: ./seatbelt_dataset/train/
+val: val      # Path to validation images: ./seatbelt_dataset/val/
+test: test    # Path to test images: ./seatbelt_dataset/test/
+
+# Number of classes
+nc: 2
+
+# Class names (must match folder names in train/val/test directories)
+names:
+  0: no_seatbelt   # Folder: ./seatbelt_dataset/train/no_seatbelt/
+  1: seatbelt      # Folder: ./seatbelt_dataset/train/seatbelt/
