@@ -725,9 +725,9 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
       
       // Match the transform ultralytics uses for YOLOv8 classification:
       // scale the shorter side to 224 preserving aspect ratio, then take the
-      // centre 224x224 crop. Measured on the labelled hold-out set, this beats
-      // a plain squash-resize to 224x224 (78.6% vs 74.6%), because squashing
-      // distorts the diagonal belt strap the model keys on.
+      // centre 224x224 crop. On the labelled hold-out set this measured better
+      // than a plain squash-resize to 224x224, because squashing distorts the
+      // diagonal belt strap the model keys on.
       final int shorterSide =
           image.width < image.height ? image.width : image.height;
       final double scale = _inputSize / shorterSide;
@@ -805,57 +805,25 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
       if (_isMobile()) {
         // Add haptic feedback for mobile
         await HapticFeedback.vibrate();
-        
-        // Try local audio file first (most reliable for mobile)
-        bool localAudioPlayed = false;
+      }
+
+      // Every fallback below is on-device. The alert deliberately has no
+      // network path: fetching a sound would send a request to a third party
+      // at the exact moment a violation is detected, revealing the user's IP
+      // and the timing of the alert, and contradicting the privacy policy's
+      // guarantee that nothing leaves the device.
+      try {
+        await _audioPlayer.play(AssetSource('audio/alert.mp3'));
+        print('Played bundled alert.mp3');
+      } catch (e) {
+        print('Bundled alert.mp3 failed: $e');
         try {
-          // Try to play local alert.mp3 file from assets
-          await _audioPlayer.play(AssetSource('audio/alert.mp3'));
-          localAudioPlayed = true;
-          print('Successfully played local alert.mp3');
-        } catch (e) {
-          print('Local audio (alert.mp3) failed: $e');
-        }
-        
-        // If local audio didn't work, try URL audio as backup
-        if (!localAudioPlayed) {
-          try {
-            await _audioPlayer.play(UrlSource('https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'));
-            print('Successfully played URL audio as backup');
-          } catch (e) {
-            print('URL audio backup failed: $e');
-            
-            // Try one more system sound as final backup
-            try {
-              await SystemSound.play(SystemSoundType.click);
-            } catch (e2) {
-              print('Even backup system sound failed: $e2');
-            }
-          }
-        }
-      } else {
-        // For desktop and web, try local audio first, then URL
-        bool localAudioPlayed = false;
-        try {
-          // Try local alert.mp3 first
-          await _audioPlayer.play(AssetSource('audio/alert.mp3'));
-          localAudioPlayed = true;
-          print('Desktop: Successfully played local alert.mp3');
-        } catch (e) {
-          print('Desktop: Local audio (alert.mp3) failed: $e');
-        }
-        
-        // If local didn't work, try URL
-        if (!localAudioPlayed) {
-          try {
-            await _audioPlayer.play(UrlSource('https://www.soundjay.com/misc/sounds/bell-ringing-05.wav'));
-            print('Desktop: Successfully played URL audio as backup');
-          } catch (e) {
-            print('Desktop: URL audio backup failed: $e');
-          }
+          await SystemSound.play(SystemSoundType.click);
+        } catch (e2) {
+          print('Backup system sound failed: $e2');
         }
       }
-      
+
     } catch (e) {
       print('Critical error in audio playback: $e');
       
@@ -1240,7 +1208,7 @@ class _SeatbeltDetectorHomeState extends State<SeatbeltDetectorHome> {
                 Expanded(
                   child: Text(
                     _modelLoaded
-                        ? '🧠 On-device model active - approx. 79% accurate, not a substitute for checking your belt'
+                        ? '🧠 On-device model active - assistive only, always check your belt yourself'
                         : '⚠️ Model not loaded - detection is disabled',
                     style: TextStyle(
                       fontSize: 12,
