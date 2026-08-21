@@ -76,11 +76,9 @@ Quick launcher for Windows desktop version
 - System alert sounds
 - Haptic feedback (vibration)
 - Continuous alerts when unsafe
-- URL-based backup sounds
 
 ### Desktop:
 - System alert sounds
-- URL-based backup sounds
 - Visual alert indicators
 - No haptic feedback
 

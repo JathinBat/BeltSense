@@ -13,5 +13,6 @@
 # The app will automatically detect and use this file when present.
 # If this file is missing, it will fall back to:
 # 1. System sounds
-# 2. Online audio (if available)
-# 3. Haptic feedback (mobile only)
+# 2. Haptic feedback (mobile only)
+#
+# All fallbacks are on-device. The app never fetches audio over the network.

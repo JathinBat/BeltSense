@@ -2,6 +2,6 @@ names:
 - no_seatbelt
 - seatbelt
 nc: 2
-path: c:/Users/user/Documents/mcserver/SeatbeltProject/seatbelt_ACTUALLY_FILTERED/seatbelt_dataset/seatbelt_dataset
+path: c:/Users/user/Documents/projects/SeatbeltProject/seatbelt_ACTUALLY_FILTERED/seatbelt_dataset/seatbelt_dataset
 train: train
 val: val

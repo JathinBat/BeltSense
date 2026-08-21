@@ -42,7 +42,6 @@ The app now uses a layered approach:
 1. **System Sounds** (most reliable)
 2. **Custom Audio Files** (if present in assets/audio/)
 3. **Haptic Feedback** (mobile devices)
-4. **URL Audio** (fallback)
 
 ## How to Add Your Audio Files:
 
@@ -70,7 +69,6 @@ The app will automatically try to play:
 1. Your custom `assets/audio/alert.mp3` file (if present)
 2. System alert sound (fallback)
 3. Haptic vibration (mobile)
-4. Online audio (last resort)
 
 ## Testing Audio:
 1. Open the app at http://localhost:8080

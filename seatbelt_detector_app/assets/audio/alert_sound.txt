@@ -2,13 +2,12 @@
 
 ## ✅ LOCAL AUDIO SUPPORT RESTORED!
 
-The app now prioritizes local audio files over online sources:
+All alert audio is on-device. The app makes no network requests.
 
 ### 🎵 Audio Playback Priority:
 1. **🎯 LOCAL AUDIO** → `assets/audio/alert.mp3` (HIGHEST PRIORITY)
 2. **🔊 System Sounds** → Built-in alert sounds
 3. **📳 Haptic Feedback** → Device vibration (mobile)
-4. **🌐 Online Audio** → URL-based fallback
 
 ### 📁 How to Add Your Custom Alert Sound:
 
@@ -41,7 +40,6 @@ The app now prioritizes local audio files over online sources:
 If `alert.mp3` is missing or fails to load:
 - ✅ System alert sound plays
 - ✅ Device vibrates (mobile)
-- ✅ Online backup audio (if internet available)
 - ✅ Strong haptic feedback (emergency fallback)
 
 ### 🎯 Current Status:

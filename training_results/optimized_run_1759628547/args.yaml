@@ -1,7 +1,7 @@
 task: classify
 mode: train
 model: yolov8n-cls.pt
-data: C:/Users/user/Documents/mcserver/SeatbeltProject/seatbelt_ACTUALLY_FILTERED/seatbelt_dataset/seatbelt_dataset
+data: C:/Users/user/Documents/projects/SeatbeltProject/seatbelt_ACTUALLY_FILTERED/seatbelt_dataset/seatbelt_dataset
 epochs: 40
 time: null
 patience: 8
@@ -12,7 +12,7 @@ save_period: 10
 cache: true
 device: cpu
 workers: 8
-project: C:\Users\user\Documents\mcserver\SeatbeltProject\training_results
+project: C:\Users\user\Documents\projects\SeatbeltProject\training_results
 name: optimized_run_1759628547
 exist_ok: false
 pretrained: true
@@ -103,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\user\Documents\mcserver\SeatbeltProject\training_results\optimized_run_1759628547
+save_dir: C:\Users\user\Documents\projects\SeatbeltProject\training_results\optimized_run_1759628547

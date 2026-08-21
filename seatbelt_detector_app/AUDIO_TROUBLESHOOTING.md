@@ -42,7 +42,7 @@ The app was unable to play sound on mobile devices due to several configuration 
 **Solution Applied**:
 - **Primary**: Use system sounds (`SystemSound.play()`) - most reliable
 - **Secondary**: Haptic feedback for mobile devices
-- **Tertiary**: URL audio as additional layer only
+- **Tertiary**: Bundled alert.mp3 asset - no network audio is used
 - **Proper error handling** with multiple fallback levels
 
 ### 4. Inadequate Error Handling ✅ FIXED
@@ -74,8 +74,8 @@ The app was unable to play sound on mobile devices due to several configuration 
    - Verify app has audio permissions in device settings
 
 2. **Check console logs** for messages like:
-   - "Successfully played URL audio"
-   - "URL audio failed: [error details]"
+   - "Played bundled alert.mp3"
+   - "Bundled alert.mp3 failed: [error details]"
    - "Emergency: Used strong haptic feedback only"
 
 3. **Try different devices**: Some devices have stricter audio policies
@@ -86,18 +86,15 @@ The app was unable to play sound on mobile devices due to several configuration 
 - System alert sound plays
 - Device vibrates  
 - Visual alert shows
-- Additional URL audio may play (depending on internet)
 
 ### iOS:
 - System alert sound plays
 - Device vibrates
 - Visual alert shows  
-- Additional URL audio may play (depending on internet)
 
 ### Desktop (Windows/Mac/Linux):
 - System alert sound plays
 - Visual alert shows
-- URL audio may play (depending on internet)
 
 ## Future Improvements (Optional)
 

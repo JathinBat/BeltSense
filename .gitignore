@@ -17,9 +17,11 @@ no seatbelt.v3i.yolov8/
 **/val_batch*.jpg
 runs/
 
-# Intermediate checkpoints (epoch0.pt, last.pt, ...). Only best.pt is kept.
-**/weights/epoch*.pt
-**/weights/last.pt
+# Training checkpoints. Not tracked at all: they are large, and PyTorch
+# .pt files are pickles that embed the absolute path of the machine that
+# trained them. The only model in the repo is the app's exported ONNX.
+**/weights/
+*.pt
 
 # Regenerable dependencies — ultralytics downloads these on demand.
 yolov8n*.pt

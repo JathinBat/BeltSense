@@ -12,6 +12,13 @@ A YOLOv8-based image classifier for detecting whether people in car images are w
 > identifiable people collected from image search. They are deliberately not
 > tracked in this repository — see `.gitignore`.
 
+> **Note on model files:** the only model tracked here is
+> `seatbelt_detector_app/assets/models/seatbelt_model.onnx`, which the app runs
+> on-device. Training checkpoints (`best.pt`) are not tracked — PyTorch
+> checkpoints are pickles that embed the absolute path of the machine that
+> produced them. Keep them locally and regenerate the app model with
+> `python convert_model_for_flutter.py <path/to/best.pt>`.
+
 ## 🎯 Usage
 
 ### Train the Model

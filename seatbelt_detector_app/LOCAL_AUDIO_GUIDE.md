@@ -6,12 +6,11 @@ Your seatbelt detector app now has **enhanced local audio support**!
 
 ### 🎵 **Updated Audio System**:
 
-**Priority Order**:
+**Priority Order** (all on-device - the app makes no network requests):
 1. **🎯 Local Audio File** (`assets/audio/alert.mp3`) - **HIGHEST PRIORITY**
 2. **🔊 System Alert Sound** - Built-in platform sounds
 3. **📳 Haptic Feedback** - Device vibration (mobile)
-4. **🌐 Online Audio** - Internet-based backup
-5. **💪 Emergency Haptic** - Final fallback
+4. **💪 Emergency Haptic** - Final fallback
 
 ### 📁 **How to Add Your Custom Alert Sound**:
 
@@ -47,13 +46,11 @@ flutter build apk
 1. 🎵 **Try local `alert.mp3`** → If present and working
 2. 🔊 **Play system alert sound** → Always plays
 3. 📳 **Vibrate device** → Haptic feedback
-4. 🌐 **Try online backup** → If local audio failed
-5. 💪 **Emergency vibration** → Last resort
+4. 💪 **Emergency vibration** → Last resort
 
 #### Desktop/Web:
 1. 🎵 **Try local `alert.mp3`** → If present
 2. 🔊 **Play system alert sound** → Always plays
-3. 🌐 **Try online backup** → If local failed
 
 ### 📲 **Installation & Testing**:
 
